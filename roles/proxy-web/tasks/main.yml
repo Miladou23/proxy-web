@@ -1,0 +1,120 @@
+---
+- name: Packages
+  ansible.builtin.apt:
+    name: [haproxy, socat, iptables, iptables-persistent]
+
+- name: Configurations copied from templates
+  ansible.builtin.template:
+    src: 'templates/{{ item }}.j2'
+    dest: '{{ item }}'
+    mode: '0640'
+    owner: root
+    group: root
+  with_items:
+    - /etc/iptables/rules.v4
+  notify:
+    - Restart netfilter-persistent
+  tags: files
+
+- name: Configurations copied from static files
+  ansible.builtin.copy:
+    src: 'files/{{ item }}'
+    dest: '{{ item }}'
+    mode: '0644'
+    owner: root
+    group: root
+  with_items:
+    - /etc/logrotate.d/haproxy
+    - /etc/syslog-ng/syslog-ng.conf
+    - /etc/syslog-ng/conf.d/haproxy.conf
+  notify:
+    - Restart syslog-ng
+  tags: files
+
+- name: Haproxy configuration files
+  ansible.builtin.copy:
+    src: files/etc/haproxy/{{ item }}
+    dest: /etc/haproxy/{{ item }}
+    mode: '0440'
+    owner: haproxy
+    group: haproxy
+  with_items:
+    - blacklisted_ips
+    - mobiles-ua-for-ia.lst
+  notify:
+    - Reload haproxy
+  tags: [files, haproxy]
+
+- name: Haproxy configuration templates
+  ansible.builtin.template:
+    src: templates/etc/haproxy/{{ item }}.j2
+    dest: /etc/haproxy/{{ item }}
+    mode: '0440'
+    owner: haproxy
+    group: haproxy
+  with_items:
+    - haproxy.cfg
+    - ip_exlibris.lst
+    - ip_arawa.lst
+    - sites_webfarm_prod.lst
+    - sites_webfarm_test.lst
+    - sites_webfarm_coloc_test.lst
+  notify:
+    - Reload haproxy
+  tags: [files, haproxy]
+
+- name: Load Netfilter
+  ansible.builtin.service:
+    name: netfilter-persistent
+    enabled: true
+  notify:
+    - Restart netfilter-persistent
+
+- name: Load HAproxy
+  ansible.builtin.service:
+    name: haproxy
+    enabled: true
+    state: started
+
+- name: Haproxy user can read SSL certs
+  ansible.builtin.user:
+    name: haproxy
+    append: true
+    groups: 'ssl-cert'
+
+- name: SSL certs directory
+  ansible.builtin.file:
+    path: '{{ item.p }}'
+    mode: '{{ item.m }}'
+    owner: '{{ item.o }}'
+    group: '{{ item.g }}'
+  with_items:
+    - { p: '/usr/local', m: '0755', o: 'root', g: 'staff' }
+    - { p: '/usr/local/etc', m: '0755', o: 'root', g: 'staff' }
+    - { p: '/usr/local/etc/ssl', m: '0755', o: 'root', g: 'root' }
+    - { p: '/usr/local/etc/ssl/certs', m: '0755', o: 'root', g: 'root' }
+    - { p: '/usr/local/etc/ssl/certs/haproxy', m: '0750', o: 'root', g: 'ssl-cert' }
+
+# principalement config recommandée sur https://www.haproxy.com/documentation/hapee/latest/getting-started/system-tuning/
+# en plus conservateur, surtout lors de différences avec le tuning des proxies de Moodle
+- name: Sysctl net parameters tuning
+  ansible.posix.sysctl:
+    name: '{{ item.name }}'
+    value: '{{ item.value }}'
+    sysctl_set: true
+    state: present
+    reload: true
+  loop:
+    # net.core.somaxconn = defaut: 128, moodle: 10240, hapee: 60000
+    - { name: 'net.core.somaxconn', value: '10240' }
+    # net.ipv4.tcp_max_syn_backlog = defaut: 128, moodle: 10240, hapee: 60000
+    - { name: 'net.ipv4.tcp_max_syn_backlog', value: '10240' }
+    # net.ipv4.ip_local_port_range = defaut: 32768 60999, moodle: 15000 64999, hapee: 1024 65023
+    - { name: 'net.ipv4.ip_local_port_range', value: '15000 64999' }
+    # net.ipv4.tcp_fin_timeout = defaut: 60, moodle: 30, hapee: 30
+    - { name: 'net.ipv4.tcp_fin_timeout', value: '30' }
+    # net.ipv4.tcp_tw_reuse = defaut: 2, moodle: 1, hapee: 1
+    - { name: 'net.ipv4.tcp_tw_reuse', value: '1' }
+    # net.ipv4.tcp_synack_retries = defaut: 5, moodle: 5, hapee: 3
+    - { name: 'net.ipv4.tcp_synack_retries', value: '3' }
+  tags: sysctl

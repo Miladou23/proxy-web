@@ -1,0 +1,19 @@
+# vim: ft=yaml ts=2 sts=2 sw=2 expandtab:
+#
+# Déploiement complet                          # how-to-play
+# $ ansible-playbook -i hosts proxy-web.yml -D # how-to-play
+#
+# Déploiement config haproxy                              # how-to-play
+# $ ansible-playbook -i hosts proxy-web.yml -D -t haproxy # how-to-play
+---
+- name: Reverse proxy
+  hosts: all
+  become: true
+  roles:
+    - role: up_stash_file
+      path: /root/.haproxy_passwd
+      fact: haproxy_passwd
+      secret: "{{ haproxy_passwd|default('') }}"
+      tags: [files, haproxy]
+    - role: proxy-web
+      tags: [haproxy]

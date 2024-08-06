@@ -1,0 +1,149 @@
+# vim: ft=yaml ts=2 sts=2 sw=2 expandtab:
+---
+arawa_timestamps:
+# Format date -d "2024-03-27 15:00" "+%s"
+  start_timestamp: 1718028000
+  end_timestamp: 1718380800
+
+ip_arawa:
+  - '51.254.222.66'
+  - '54.38.91.216'
+#  - '127.0.0.1' # [help]:20278
+
+ip_exlibris:
+  - '95.172.90.160/27'
+  - '31.186.254.128/28'
+  - '216.147.214.128/26'
+  - '216.147.218.128/26'
+  - '216.147.218.64/26'
+  - '216.147.215.0/27'
+
+ip_victoriametrics: '100.65.12.160/32'
+
+sites_webfarm_prod:
+  - '3p5.u-paris.fr'
+  - '3phm.u-paris.fr'
+  - 'agingup.u-paris.fr'
+  - 'analytics.app.u-paris.fr'
+  - 'analyticsold.app.u-paris.fr'
+  - 'biomedical-engineering.u-paris.fr'
+  - 'bionum.u-paris.fr'
+  - 'biostm.u-paris.fr'
+  - 'canaudlab.u-paris.fr'
+  - 'cedag.u-paris.fr'
+  - 'centre-detudes-du-vivant.u-paris.fr'
+  - 'chemistry.u-paris.fr'
+  - 'chimie.u-paris.fr'
+  - 'clillac-arp.u-paris.fr'
+  - 'ed131.u-paris.fr'
+  - 'ed261.u-paris.fr'
+  - 'ed262.u-paris.fr'
+  - 'ed450.u-paris.fr'
+  - 'ed561.u-paris.fr'
+  - 'ed562.u-paris.fr'
+  - 'ed563.u-paris.fr'
+  - 'ed622.u-paris.fr'
+  - 'ed623.u-paris.fr'
+  - 'ed624.u-paris.fr'
+  - 'eda.u-paris.fr'
+  - 'ed.u-paris.fr'
+  - 'epigenetics.u-paris.fr'
+  - 'eur-gene.u-paris.fr'
+  - 'eurip.u-paris.fr'
+  - 'fetedelascience.u-paris.fr'
+  - 'fire-up.u-paris.fr'
+  - 'futures-quantitative-finance.u-paris.fr'
+  - 'geoteca.u-paris.fr'
+  - 'guide-experts.u-paris.fr'
+  - 'htl.u-paris.fr'
+  - 'i3sp.u-paris.fr'
+  - 'ict.u-paris.fr'
+  - 'ideal.u-paris.fr'
+  - 'ihd-2515.u-paris.fr'
+  - 'inflamex.u-paris.fr'
+  - 'innovative-therapies-cancerology.u-paris.fr'
+  - 'institut-diabete.u-paris.fr'
+  - 'institut-sante-femmes.u-paris.fr'
+  - 'ipop.u-paris.fr'
+  - 'irems.u-paris.fr'
+  - 'jaid.u-paris.fr'
+  - 'jpo.u-paris.fr'
+  - 'lapea.u-paris.fr'
+  - 'lcsp.u-paris.fr'
+  - 'liraes.u-paris.fr'
+  - 'lmc2.u-paris.fr'
+  - 'lpps.u-paris.fr'
+  - 'lps.u-paris.fr'
+  - 'mage.u-paris.fr'
+  - 'maieutique.u-paris.fr'
+  - 'meppot.u-paris.fr'
+  - 'microb-up.u-paris.fr'
+  - 'miror.u-paris.fr'
+  - 'mpq.u-paris.fr'
+  - 'msc.u-paris.fr'
+  - 'nanomed.u-paris.fr'
+  - 'neurodiderot.u-paris.fr'
+  - 'neuroscience.u-paris.fr'
+  - 'new-larca.u-paris.fr'
+  - 'new-station-fontainebleau.u-paris.fr'
+  - 'one-health-eid.u-paris.fr'
+  - 'ouiso.u-paris.fr'
+  - 'philepol.u-paris.fr'
+  - 'picmo.u-paris.fr'
+  - 'pitor.u-paris.fr'
+  - 'piv.u-paris.fr'
+  - 'pole-spatial.u-paris.fr'
+  - 'plateformes.u-paris.fr'
+  - 'recherche-europe.u-paris.fr'
+  - 'rhu-fame.u-paris.fr'
+  - 'rhu-sprint.u-paris.fr'
+  - 'sergent-consciousness-lab.u-paris.fr'
+  - 'society-health.u-paris.fr'
+  - 'sustainability-transitions.u-paris.fr'
+  - 'urb2i.u-paris.fr'
+  - 'urp2496.u-paris.fr'
+  - 'utcbs.u-paris.fr'
+  - 'vac.u-paris.fr'
+  - 'videos-chirurgicales.u-paris.fr'
+  - 'webfarm.app.u-paris.fr'
+  - 'wplabos.app.u-paris.fr'
+  - 'wplabos-to-clone.u-paris.fr'
+  - 'wpsites.app.u-paris.fr'
+
+sites_webfarm_test:
+  - 'analytics-test.app.u-paris.fr'
+  - 'analyticsold-test.app.u-paris.fr'
+  - 'iutparis-seine-test.u-paris.fr'
+  - 'webfarm-test.app.u-paris.fr'
+  - 'wplabos-clone.u-paris.fr'
+  - 'wplabos-test.app.u-paris.fr'
+  - 'wpsites-test.app.u-paris.fr'
+  # Additional sites for testing migrations, cf. Help#29423
+  - 'new-droit.u-paris.fr'
+  - 'new-ia-sante.u-paris.fr'
+
+sites_webfarm_coloc_test: []
+
+# redirection simple fqdn -> target (url), déployée en http et https
+haproxy_simple_redirect:
+  appui-recherche.u-paris.fr: https://u-paris.fr/appui-a-la-recherche/
+  cerilac.u-paris.fr: https://u-paris.fr/cerilac/
+  doctorat.u-paris.fr: https://u-paris.fr/doctorat/
+  eidd.u-paris.fr: https://u-paris.fr/eidd/
+  etudesanglophones.u-paris.fr: https://u-paris.fr/etudes-anglophones/
+  intranet-etu.u-paris.fr: https://intranet.u-paris.fr/
+  jeeses.fr: https://jeeses.org/
+  lac.u-paris.fr: https://u-paris.fr/lac/
+  lcao.u-paris.fr: https://u-paris.fr/lcao/
+  lsh.u-paris.fr: https://u-paris.fr/societes-humanites/lsh/
+  medecine.paris-centre.u-paris.fr: https://u-paris.fr/medecine/ # [dsin #101547]
+  mnesys-archives.app.u-paris.fr: https://universitepariscite.mnesys.fr/ # [help #35241]
+  odontologie.montrouge.u-paris.fr: https://u-paris.fr/odontologie/ # [help #11788]
+  portail-mnesys-archives.app.u-paris.fr: https://universitepariscite-intranet.mnesys.fr/ # [help #35241]
+  script.u-paris.fr: https://u-paris.fr/
+  sdv.u-paris.fr: https://u-paris.fr/sdv/
+  sfpc.u-paris.fr: https://formationcontinue.u-paris.fr/
+  sport.u-paris.fr: https://u-paris.fr/sport/
+  vie-associative.u-paris.fr: https://u-paris.fr/vie-associative/
+  www.jeeses.fr: https://jeeses.org/
+  www.jeeses.org: https://jeeses.org/

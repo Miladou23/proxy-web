@@ -1,0 +1,1094 @@
+# vim: ft=haproxy ts=4 sw=4 noet:
+#
+
+global
+	log 127.0.0.1:514 local0
+	chroot /var/lib/haproxy
+	stats socket /run/haproxy/admin.sock mode 660 level admin
+	user haproxy
+	group haproxy
+	daemon
+
+	maxconn 10000
+
+	# Default SSL material locations
+	ca-base /etc/ssl/certs
+	crt-base /etc/ssl/private
+
+	# Default ciphers to use on SSL-enabled listening sockets.
+	# For more information, see ciphers(1SSL). This list is from:
+	#  https://hynek.me/articles/hardening-your-web-servers-ssl-ciphers/
+	# An alternative list with additional directives can be obtained from
+	#  https://mozilla.github.io/server-side-tls/ssl-config-generator/?server=haproxy
+	ssl-default-bind-ciphers ECDH+AESGCM:DH+AESGCM:ECDH+AES256:DH+AES256:ECDH+AES128:DH+AES:RSA+AESGCM:RSA+AES:!aNULL:!MD5:!DSS
+	ssl-default-bind-options no-sslv3
+
+	tune.ssl.default-dh-param 2048
+
+defaults
+	log	global
+	mode	http
+	maxconn 10000
+	option	dontlognull
+	#stats enable
+	#stats hide-version
+	#stats realm Haproxy\ Statistics
+	#stats uri /stats
+	#stats auth hadmin:{{ haproxy_passwd }}
+	timeout connect 5000
+	timeout client  50000
+	timeout server  50000
+	errorfile 400 /etc/haproxy/errors/400.http
+	errorfile 403 /etc/haproxy/errors/403.http
+	errorfile 408 /etc/haproxy/errors/408.http
+	errorfile 500 /etc/haproxy/errors/500.http
+	errorfile 502 /etc/haproxy/errors/502.http
+	errorfile 503 /etc/haproxy/errors/503.http
+	errorfile 504 /etc/haproxy/errors/504.http
+
+frontend http_proxy
+	bind 195.220.128.193:80
+	log global
+	option	httplog
+	capture request header Host       len 32  # for URL
+	capture request header User-Agent len 200 # for stats
+
+	acl is-blocked-ip src -f /etc/haproxy/blacklisted_ips
+	http-request deny if is-blocked-ip
+
+	acl host_is_alumni_u_paris_fr  hdr_dom(host) -i -m dom alumni.u-paris.fr
+	acl host_is_box       	    hdr_dom(host) -i -m dom box.u75.fr
+	acl host_is_hal				hdr_dom(host) -i -m dom hal.u-paris.fr
+	acl host_is_odf_ed_dev1     hdr_dom(host) -i -m dom editodf-dev.u-paris.fr
+	acl host_is_odf_ed_prod1    hdr_dom(host) -i -m dom editodf.u-paris.fr
+	acl host_is_odf_ed_test1    hdr_dom(host) -i -m dom editodf-test.u-paris.fr
+	acl host_is_housing         hdr_dom(host) -i -m dom housing.u-paris.fr
+	acl host_is_odf_pub_dev1    hdr_dom(host) -i -m dom odf-dev.u-paris.fr
+	acl host_is_odf_pub_prod1   hdr_dom(host) -i -m dom odf.u-paris.fr
+	acl host_is_odf_pub_test1   hdr_dom(host) -i -m dom odf-test.u-paris.fr
+	acl host_is_u_paris_fr      hdr_dom(host) -i -m dom u-paris.fr
+	acl host_is_www_u_paris_fr  hdr_dom(host) -i -m dom www.u-paris.fr
+
+	redirect scheme https code 301 if { hdr(Host) -i alumni.u-paris.fr }                  !{ ssl_fc }
+    redirect scheme https code 301 if { hdr(Host) -i analyse.u-paris.fr }                 !{ ssl_fc }
+	redirect scheme https code 301 if { hdr(Host) -i analytics.app.u-paris.fr }           !{ ssl_fc }
+	redirect scheme https code 301 if { hdr(Host) -i analytics-test.app.u-paris.fr }      !{ ssl_fc }
+	redirect scheme https code 301 if { hdr(Host) -i anibio.app.u-paris.fr }              !{ ssl_fc }
+    redirect scheme https code 301 if { hdr(Host) -i bfa.u-paris.fr }      !{ ssl_fc }
+	redirect scheme https code 301 if { hdr(Host) -i compte.app.u-paris.fr }              !{ ssl_fc }
+	redirect scheme https code 301 if { hdr(Host) -i ecandidat-test.app.u-paris.fr }      !{ ssl_fc }
+	redirect scheme https code 301 if { hdr(Host) -i editodf-dev.u-paris.fr }             !{ ssl_fc }
+	redirect scheme https code 301 if { hdr(Host) -i editodf-test.u-paris.fr }            !{ ssl_fc }
+	redirect scheme https code 301 if { hdr(Host) -i editodf.u-paris.fr }                 !{ ssl_fc }
+	redirect scheme https code 301 if { hdr(Host) -i elecnano.u-paris.fr }                !{ ssl_fc }
+    redirect scheme https code 301 if { hdr(Host) -i enquete.u-paris.fr }                 !{ ssl_fc }
+	redirect scheme https code 301 if { hdr(Host) -i epfolio.app.u-paris.fr }             !{ ssl_fc }
+	redirect scheme https code 301 if { hdr(Host) -i epfolio-test.app.u-paris.fr }        !{ ssl_fc }
+	redirect scheme https code 301 if { hdr(Host) -i epfolio-sandbox.app.u-paris.fr }        !{ ssl_fc }
+	redirect scheme https code 301 if { hdr(Host) -i auth-dev.app.u-paris.fr }                  !{ ssl_fc }
+	redirect scheme https code 301 if { hdr(Host) -i auth-dev-dev.app.u-paris.fr }              !{ ssl_fc }
+	redirect scheme https code 301 if { hdr(Host) -i auth-dev-test.app.u-paris.fr }             !{ ssl_fc }
+	redirect scheme https code 301 if { hdr(Host) -i ms-phare-candidature.app.u-paris.fr }      !{ ssl_fc }
+	redirect scheme https code 301 if { hdr(Host) -i ms-phare-gse.app.u-paris.fr }              !{ ssl_fc }
+	redirect scheme https code 301 if { hdr(Host) -i ms-phare-gsf.app.u-paris.fr }              !{ ssl_fc }
+	redirect scheme https code 301 if { hdr(Host) -i ms-phare-poste.app.u-paris.fr }            !{ ssl_fc }
+	redirect scheme https code 301 if { hdr(Host) -i ms-phare-profil.app.u-paris.fr }           !{ ssl_fc }
+	redirect scheme https code 301 if { hdr(Host) -i ms-phare-candidature-test.app.u-paris.fr } !{ ssl_fc }
+	redirect scheme https code 301 if { hdr(Host) -i ms-phare-gse-test.app.u-paris.fr }         !{ ssl_fc }
+	redirect scheme https code 301 if { hdr(Host) -i ms-phare-gsf-test.app.u-paris.fr }         !{ ssl_fc }
+	redirect scheme https code 301 if { hdr(Host) -i ms-phare-poste-test.app.u-paris.fr }       !{ ssl_fc }
+	redirect scheme https code 301 if { hdr(Host) -i ms-phare-profil-test.app.u-paris.fr }      !{ ssl_fc }
+	redirect scheme https code 301 if { hdr(Host) -i emploi.u-paris.fr }                        !{ ssl_fc }
+	redirect scheme https code 301 if { hdr(Host) -i emploi-test.app.u-paris.fr }               !{ ssl_fc }
+	redirect scheme https code 301 if { hdr(Host) -i gl1.app.u-paris.fr }                 !{ ssl_fc }
+	redirect scheme https code 301 if { hdr(Host) -i gl1-test.app.u-paris.fr }            !{ ssl_fc }
+	redirect scheme https code 301 if { hdr(Host) -i glpi.app.u-paris.fr }                !{ ssl_fc }
+	redirect scheme https code 301 if { hdr(Host) -i glpi-test.app.u-paris.fr }           !{ ssl_fc }
+	redirect scheme https code 301 if { hdr(Host) -i hal.u-paris.fr }                     !{ ssl_fc }
+	redirect scheme https code 301 if { hdr(Host) -i help.app.u-paris.fr }                !{ ssl_fc }
+	redirect scheme https code 301 if { hdr(Host) -i help-dev.app.u-paris.fr }            !{ ssl_fc }
+	redirect scheme https code 301 if { hdr(Host) -i help-tmp.app.u-paris.fr }            !{ ssl_fc }
+	redirect scheme https code 301 if { hdr(Host) -i housing.u-paris.fr }                 !{ ssl_fc }
+	redirect scheme https code 301 if { hdr(Host) -i jeeses.org }                         !{ ssl_fc }
+	redirect scheme https code 301 if { hdr(Host) -i listes.u-paris.fr }                  !{ ssl_fc }
+	redirect scheme https code 301 if { hdr(Host) -i medecine.paris-centre.u-paris.fr }   !{ ssl_fc }
+	redirect scheme https code 301 if { hdr(Host) -i mondossierweb.app.u-paris.fr }       !{ ssl_fc }
+	redirect scheme https code 301 if { hdr(Host) -i octaves.app.u-paris.fr }             !{ ssl_fc }
+	redirect scheme https code 301 if { hdr(Host) -i octaves-test.app.u-paris.fr }        !{ ssl_fc }
+    redirect scheme https code 301 if { hdr(Host) -i sinchro.app.u-paris.fr }             !{ ssl_fc }
+    redirect scheme https code 301 if { hdr(Host) -i sinchro-test.app.u-paris.fr }        !{ ssl_fc }
+    redirect scheme https code 301 if { hdr(Host) -i odf-dev.u-paris.fr }                 !{ ssl_fc }
+	redirect scheme https code 301 if { hdr(Host) -i odf-test.u-paris.fr }                !{ ssl_fc }
+	redirect scheme https code 301 if { hdr(Host) -i odf.u-paris.fr }                     !{ ssl_fc }
+	redirect scheme https code 301 if { hdr(Host) -i ojs.app.u-paris.fr }                 !{ ssl_fc }
+	redirect scheme https code 301 if { hdr(Host) -i ojs-preprod.u-paris.fr }             !{ ssl_fc }
+	redirect scheme https code 301 if { hdr(Host) -i ojs-journal1.u-paris.fr }            !{ ssl_fc }
+	redirect scheme https code 301 if { hdr(Host) -i lpasser-test.app.u-paris.fr }        !{ ssl_fc }
+	redirect scheme https code 301 if { hdr(Host) -i lpasser.app.u-paris.fr }             !{ ssl_fc }
+	redirect scheme https code 301 if { hdr(Host) -i ms-lp-api-test.app.u-paris.fr }      !{ ssl_fc }
+	redirect scheme https code 301 if { hdr(Host) -i ms-lp-api.app.u-paris.fr }           !{ ssl_fc }
+	redirect scheme https code 301 if { hdr(Host) -i omp-preprod.u-paris.fr }             !{ ssl_fc }
+	redirect scheme https code 301 if { hdr(Host) -i opus.u-paris.fr }                    !{ ssl_fc }
+	redirect scheme https code 301 if { hdr(Host) -i emerging-neurologist.org }           !{ ssl_fc }
+	redirect scheme https code 301 if { hdr(Host) -i odontologie.montrouge.u-paris.fr }   !{ ssl_fc }
+	redirect scheme https code 301 if { hdr(Host) -i ose-form.app.u-paris.fr }            !{ ssl_fc }
+	redirect scheme https code 301 if { hdr(Host) -i ose-test.app.u-paris.fr }            !{ ssl_fc }
+	redirect scheme https code 301 if { hdr(Host) -i ose.app.u-paris.fr }                 !{ ssl_fc }
+	redirect scheme https code 301 if { hdr(Host) -i prineo.app.u-paris.fr }              !{ ssl_fc }
+    redirect scheme https code 301 if { hdr(Host) -i prineo-bo.app.u-paris.fr }           !{ ssl_fc }
+	redirect scheme https code 301 if { hdr(Host) -i scola.app.u-paris.fr }               !{ ssl_fc }
+	redirect scheme https code 301 if { hdr(Host) -i scola-prep.app.u-paris.fr }          !{ ssl_fc }
+	redirect scheme https code 301 if { hdr(Host) -i papi.app.u-paris.fr }                !{ ssl_fc }
+	redirect scheme https code 301 if { hdr(Host) -i papi-test.app.u-paris.fr }           !{ ssl_fc }
+	redirect scheme https code 301 if { hdr(Host) -i sportbox.app.u-paris.fr }            !{ ssl_fc }
+	redirect scheme https code 301 if { hdr(Host) -i sportbox-test.app.u-paris.fr }       !{ ssl_fc }
+	redirect scheme https code 301 if { hdr(Host) -i support.app.u-paris.fr }             !{ ssl_fc }
+	redirect scheme https code 301 if { hdr(Host) -i support.dsin.u-paris.fr }            !{ ssl_fc }
+	redirect scheme https code 301 if { hdr(Host) -i support-test.dsin.u-paris.fr }       !{ ssl_fc }
+	redirect scheme https code 301 if { hdr(Host) -i wiki.dsin.u-paris.fr }               !{ ssl_fc }
+	redirect scheme https code 301 if { hdr(Host) -f /etc/haproxy/sites_webfarm_prod.lst }       !{ ssl_fc }
+	redirect scheme https code 301 if { hdr(Host) -f /etc/haproxy/sites_webfarm_test.lst }       !{ ssl_fc }
+	redirect scheme https code 301 if { hdr(Host) -f /etc/haproxy/sites_webfarm_coloc_prod.lst } !{ ssl_fc }
+	redirect scheme https code 301 if { hdr(Host) -f /etc/haproxy/sites_webfarm_coloc_test.lst } !{ ssl_fc }
+        redirect scheme https code 301 if { hdr(Host) -i inception-preprod.u-paris.fr }                  !{ ssl_fc }
+        redirect scheme https code 301 if { hdr(Host) -i inception.u-paris.fr }                  !{ ssl_fc }
+
+	# template redirection simple fqdn -> target (url)
+{% for fqdn, target in haproxy_simple_redirect.items() %}
+	redirect location {{ target }} code 301 if { hdr(host) -i {{ fqdn }} } !{ ssl_fc }
+{% endfor %}
+
+	use_backend auth_u-paris_fr  if { hdr(Host) -i auth.u-paris.fr }
+	use_backend box_u75_fr	  if host_is_box
+	use_backend ezproxy_u-paris_fr  if { hdr_end(Host) -i ezproxy.u-paris.fr }
+	use_backend odf_ed_dev1   if host_is_odf_ed_dev1
+	use_backend odf_ed_prod1  if host_is_odf_ed_prod1
+	use_backend odf_ed_test1  if host_is_odf_ed_test1
+	use_backend odf_pub_dev1  if host_is_odf_pub_dev1
+	use_backend odf_pub_prod1 if host_is_odf_pub_prod1
+	use_backend odf_pub_test1 if host_is_odf_pub_test1
+	use_backend u-paris_fr	  if host_is_u_paris_fr
+	use_backend u-paris_fr	  if host_is_www_u_paris_fr
+
+frontend https_proxy
+	bind 195.220.128.193:443 ssl crt /usr/local/etc/ssl/certs/haproxy/
+	log global
+	option	httplog
+	mode http
+	capture request header Host       len 32  # for URL
+	capture request header User-Agent len 200 # for stats
+
+	tcp-request inspect-delay 5s
+	tcp-request content accept if { req_ssl_hello_type 1 }
+	option forwardfor header X-Real-IP
+	http-request set-header X-Real-IP %[src]
+
+	acl is-blocked-ip src -f /etc/haproxy/blacklisted_ips
+	http-request deny if is-blocked-ip
+
+	# les "redirect" sont joués avant les "use_backend"
+	# on évite des warnings si la conf reflète cette réalité
+
+	# [dsin #88644]
+	acl mobiles-ua-for-ia hdr(user-agent) -i -m sub -f /etc/haproxy/mobiles-ua-for-ia.lst
+	redirect location /primo/mobiles.html code 302 if mobiles-ua-for-ia { hdr_reg(host) -i primo(-test)?\.app\.u-paris\.fr } { path_beg /primo } !{ path_reg ^\/primo\/(mobiles.html$|css\/|images\/) }
+	redirect location /reins/mobiles.html code 302 if mobiles-ua-for-ia { hdr_reg(host) -i reins(-test)?\.app\.u-paris\.fr } { path_beg /reins } !{ path_reg ^\/reins\/(mobiles.html$|css\/|images\/) }
+
+	# [dsin #56982]
+	# redirect prefix https://hal-univ-paris.archives-ouvertes.fr code 301 if { hdr(host) -i hal.u-paris.fr }
+	# Skip to new site to avoid intermediate redirection ; cf. https://www.ccsd.cnrs.fr/2022/06/hal-archives-ouvertes-fr-va-devenir-hal-science/
+	redirect prefix https://u-paris.hal.science code 301 if { hdr(host) -i hal.u-paris.fr }
+	# [dsin #288]
+	redirect prefix https://u-paris.studapart.com code 301 if { hdr(host) -i housing.u-paris.fr }
+	redirect prefix https://alumni-u-paris.fr code 301 if { ssl_fc_sni -i alumni.u-paris.fr }
+	# [dsin #2348] ecandidat-test
+	redirect location https://ecandidat-test.app.u-paris.fr/sciences code 301 if { hdr(host) -i ecandidat-test.app.u-paris.fr } { path_beg /faculte-sciences }
+	# [dsin #37909] ecandidat
+	redirect location https://ecandidat.app.u-paris.fr/sh1 code 301 if { hdr(host) -i ecandidat.app.u-paris.fr } { path_beg /societes-et-humanites1 }
+	redirect location https://ecandidat.app.u-paris.fr/sh2 code 301 if { hdr(host) -i ecandidat.app.u-paris.fr } { path_beg /societes-et-humanites2 }
+	# [dsin #48968]
+	redirect location https://u-paris.fr/service-sante code 301 if { hdr(host) -i u-paris.fr || hdr(host) -i www.u-paris.fr } { path_beg /siumpps }
+	# [help #19985]
+	redirect location https://fetedelascience.u-paris.fr code 301 if { hdr(host) -i u-paris.fr || hdr(host) -i www.u-paris.fr } { path_beg /fetedelascience }
+
+	# template redirection simple fqdn -> target (url)
+{% for fqdn, target in haproxy_simple_redirect.items() %}
+	redirect location {{ target }} code 301 if { hdr(host) -i {{ fqdn }} }
+{% endfor %}
+
+	# les "use_backend" sont après les "redirect"
+
+	# [dsin #2348#txn-127504] prod
+	use_backend ecandidat_app_u-paris_fr_0_wss            if { hdr(Host) -i ecandidat.app.u-paris.fr } { path_beg /ecandidat3/PUSH }
+	use_backend ecandidat_app_u-paris_fr_1_ssl            if { hdr(Host) -i ecandidat.app.u-paris.fr } { path_beg /ecandidat3 }
+	use_backend ecandidat_app_u-paris_fr_0_wss            if { hdr(Host) -i ecandidat.app.u-paris.fr } { path_beg /doctorants/PUSH }
+	use_backend ecandidat_app_u-paris_fr_1_ssl            if { hdr(Host) -i ecandidat.app.u-paris.fr } { path_beg /doctorants }
+	use_backend ecandidat_app_u-paris_fr_0_wss            if { hdr(Host) -i ecandidat.app.u-paris.fr } { path_beg /l20/PUSH }
+	use_backend ecandidat_app_u-paris_fr_1_ssl            if { hdr(Host) -i ecandidat.app.u-paris.fr } { path_beg /l20 }
+	use_backend ecandidat_app_u-paris_fr_0_wss            if { hdr(Host) -i ecandidat.app.u-paris.fr } { path_beg /m20/PUSH }
+	use_backend ecandidat_app_u-paris_fr_1_ssl            if { hdr(Host) -i ecandidat.app.u-paris.fr } { path_beg /m20 }
+	use_backend ecandidat_app_u-paris_fr_0_wss            if { hdr(Host) -i ecandidat.app.u-paris.fr } { path_beg /a20/PUSH }
+	use_backend ecandidat_app_u-paris_fr_1_ssl            if { hdr(Host) -i ecandidat.app.u-paris.fr } { path_beg /a20 }
+	use_backend ecandidat_app_u-paris_fr_0_wss            if { hdr(Host) -i ecandidat.app.u-paris.fr } { path_beg /u20/PUSH }
+	use_backend ecandidat_app_u-paris_fr_1_ssl            if { hdr(Host) -i ecandidat.app.u-paris.fr } { path_beg /u20 }
+	# [dsin #37909] prod-2
+	use_backend ecandidat_app_u-paris_fr_0_wss-2          if { hdr(Host) -i ecandidat.app.u-paris.fr } { path_beg /sh1/PUSH }
+	use_backend ecandidat_app_u-paris_fr_1_ssl-2          if { hdr(Host) -i ecandidat.app.u-paris.fr } { path_beg /sh1 }
+	use_backend ecandidat_app_u-paris_fr_0_wss            if { hdr(Host) -i ecandidat.app.u-paris.fr } { path_beg /sh2/PUSH }
+	use_backend ecandidat_app_u-paris_fr_1_ssl            if { hdr(Host) -i ecandidat.app.u-paris.fr } { path_beg /sh2 }
+	use_backend ecandidat_app_u-paris_fr_0_wss-2          if { hdr(Host) -i ecandidat.app.u-paris.fr } { path_beg /sciences1/PUSH }
+	use_backend ecandidat_app_u-paris_fr_1_ssl-2          if { hdr(Host) -i ecandidat.app.u-paris.fr } { path_beg /sciences1 }
+	use_backend ecandidat_app_u-paris_fr_0_wss            if { hdr(Host) -i ecandidat.app.u-paris.fr } { path_beg /sciences2/PUSH }
+	use_backend ecandidat_app_u-paris_fr_1_ssl            if { hdr(Host) -i ecandidat.app.u-paris.fr } { path_beg /sciences2 }
+	use_backend ecandidat_app_u-paris_fr_0_wss-2          if { hdr(Host) -i ecandidat.app.u-paris.fr } { path_beg /sante1/PUSH }
+	use_backend ecandidat_app_u-paris_fr_1_ssl-2          if { hdr(Host) -i ecandidat.app.u-paris.fr } { path_beg /sante1 }
+	use_backend ecandidat_app_u-paris_fr_0_wss            if { hdr(Host) -i ecandidat.app.u-paris.fr } { path_beg /sante2/PUSH }
+	use_backend ecandidat_app_u-paris_fr_1_ssl            if { hdr(Host) -i ecandidat.app.u-paris.fr } { path_beg /sante2 }
+	# [dsin #2348#txn-127504] test
+	use_backend ecandidat-test_app_u-paris_fr_0_wss       if { hdr(Host) -i ecandidat-test.app.u-paris.fr } { path_beg /ecandidat3/PUSH }
+	use_backend ecandidat-test_app_u-paris_fr_1_ssl       if { hdr(Host) -i ecandidat-test.app.u-paris.fr } { path_beg /ecandidat3 }
+	use_backend ecandidat-test_app_u-paris_fr_0_wss       if { hdr(Host) -i ecandidat-test.app.u-paris.fr } { path_beg /doctorants/PUSH }
+	use_backend ecandidat-test_app_u-paris_fr_1_ssl       if { hdr(Host) -i ecandidat-test.app.u-paris.fr } { path_beg /doctorants }
+	use_backend ecandidat-test_app_u-paris_fr_0_wss       if { hdr(Host) -i ecandidat-test.app.u-paris.fr } { path_beg /l20/PUSH }
+	use_backend ecandidat-test_app_u-paris_fr_1_ssl       if { hdr(Host) -i ecandidat-test.app.u-paris.fr } { path_beg /l20 }
+	use_backend ecandidat-test_app_u-paris_fr_0_wss       if { hdr(Host) -i ecandidat-test.app.u-paris.fr } { path_beg /m20/PUSH }
+	use_backend ecandidat-test_app_u-paris_fr_1_ssl       if { hdr(Host) -i ecandidat-test.app.u-paris.fr } { path_beg /m20 }
+	use_backend ecandidat-test_app_u-paris_fr_0_wss       if { hdr(Host) -i ecandidat-test.app.u-paris.fr } { path_beg /a20/PUSH }
+	use_backend ecandidat-test_app_u-paris_fr_1_ssl       if { hdr(Host) -i ecandidat-test.app.u-paris.fr } { path_beg /a20 }
+	use_backend ecandidat-test_app_u-paris_fr_0_wss       if { hdr(Host) -i ecandidat-test.app.u-paris.fr } { path_beg /u20/PUSH }
+	use_backend ecandidat-test_app_u-paris_fr_1_ssl       if { hdr(Host) -i ecandidat-test.app.u-paris.fr } { path_beg /u20 }
+	# [dsin #2348] ecandidat-test (part 2)
+	use_backend ecandidat-test_app_u-paris_fr_0_wss       if { hdr(Host) -i ecandidat-test.app.u-paris.fr } { path_beg /ecandidat/PUSH }
+	use_backend ecandidat-test_app_u-paris_fr_1_ssl       if { hdr(Host) -i ecandidat-test.app.u-paris.fr } { path_beg /ecandidat }
+	use_backend ecandidat-test_app_u-paris_fr_0_wss       if { hdr(Host) -i ecandidat-test.app.u-paris.fr } { path_beg /sciences/PUSH }
+	use_backend ecandidat-test_app_u-paris_fr_1_ssl       if { hdr(Host) -i ecandidat-test.app.u-paris.fr } { path_beg /sciences }
+    # [help #38937]
+    use_backend ecandidat-test_app_u-paris_fr_1_ssl       if { hdr(Host) -i ecandidat-test.app.u-paris.fr }
+
+	use_backend activation_app_u-paris_fr_ssl             if { ssl_fc_sni -i activation.app.u-paris.fr } or { ssl_fc_sni -i activation-api.app.u-paris.fr }
+	use_backend activation-test_app_u-paris_fr_ssl        if { ssl_fc_sni -i activation-test.app.u-paris.fr } or { ssl_fc_sni -i activation-api-test.app.u-paris.fr }
+	use_backend adeconsult.app.u-paris.fr_ssl             if { hdr(Host) -i adeconsult.app.u-paris.fr }
+	use_backend adfs_u-paris_fr_ssl                       if { ssl_fc_sni -i adfs.u-paris.fr }
+	use_backend amethis_app_u-paris_fr_ssl                if { hdr(Host) -i amethis.app.u-paris.fr } { path_beg /amethis-client }
+	use_backend amethis_app_u-paris_fr_ssl                if { hdr(Host) -i amethis.app.u-paris.fr } { path_beg /amethis-server }
+	use_backend amethis_app_u-paris_fr_ssl                if { hdr(Host) -i amethis.app.u-paris.fr } { path_beg /Shibboleth.sso }
+	use_backend amethis-collector_app_u-paris_fr_ssl      if { hdr(Host) -i amethis-collector.app.u-paris.fr } { path_beg /amethis-collector }
+	use_backend amethis-collector-test_app_u-paris_fr_ssl if { hdr(Host) -i amethis-collector-test.app.u-paris.fr } { path_beg /amethis-collector }
+	use_backend amethis-test_app_u-paris_fr_ssl           if { hdr(Host) -i amethis-test.app.u-paris.fr } { path_beg /amethis-client }
+	use_backend amethis-test_app_u-paris_fr_ssl           if { hdr(Host) -i amethis-test.app.u-paris.fr } { path_beg /amethis-server }
+	use_backend amethis-test_app_u-paris_fr_ssl           if { hdr(Host) -i amethis-test.app.u-paris.fr } { path_beg /Shibboleth.sso }
+	use_backend amethis-dev_app_u-paris_fr_ssl            if { hdr(Host) -i amethis-dev.app.u-paris.fr } { path_beg /amethis-client }
+	use_backend amethis-dev_app_u-paris_fr_ssl            if { hdr(Host) -i amethis-dev.app.u-paris.fr } { path_beg /amethis-server }
+	use_backend amethis-dev_app_u-paris_fr_ssl            if { hdr(Host) -i amethis-dev.app.u-paris.fr } { path_beg /Shibboleth.sso }
+        use_backend amethis-dev1_app_u-paris_fr_ssl           if { hdr(Host) -i amethis-dev1.app.u-paris.fr } { path_beg /amethis-client }
+        use_backend amethis-dev1_app_u-paris_fr_ssl           if { hdr(Host) -i amethis-dev1.app.u-paris.fr } { path_beg /amethis-server }
+        use_backend amethis-dev1_app_u-paris_fr_ssl           if { hdr(Host) -i amethis-dev1.app.u-paris.fr } { path_beg /Shibboleth.sso }
+	use_backend analyse_u-paris_fr_ssl                    if { hdr(Host) -i analyse.u-paris.fr }
+	use_backend anibio_app_u-paris_fr_ssl                 if { hdr(Host) -i anibio.app.u-paris.fr }
+	use_backend apo-connect_app_u-paris_fr_ssl            if { ssl_fc_sni -i apo-connect.app.u-paris.fr } { path_beg /connect }
+	use_backend apo-connect-test_app_u-paris_fr_ssl       if { ssl_fc_sni -i apo-connect-test.app.u-paris.fr } { path_beg /connect }
+	use_backend apo-connect-test_app_u-paris_fr_ssl       if { ssl_fc_sni -i connect-test.app.u-paris.fr } { path_beg /connect }
+	use_backend apo-utils_app_u-paris_fr_ssl              if { ssl_fc_sni -i apo-utils.app.u-paris.fr } { path_beg /opi-cpge }
+	use_backend apo-utils_app_u-paris_fr_ssl              if { ssl_fc_sni -i apo-utils.app.u-paris.fr } { path_beg /webservices } { src 193.50.43.30/32 193.54.151.253/32 194.167.72.253/32 193.51.147.128/30 193.51.147.132/32 }
+	use_backend apps-bu-app_u-paris_fr_ssl                if { ssl_fc_sni -i apps-bu-dbm.app.u-paris.fr }
+	use_backend apps-bu-app_u-paris_fr_ssl                if { ssl_fc_sni -i planningbiblio.app.u-paris.fr }
+	use_backend apps-bu-gedfs_u-paris_fr_ssl              if { ssl_fc_sni -i theses-doctorat.u-paris.fr } { path_beg /gedfs/these }
+	use_backend apps-bu-app_u-paris_fr_ssl                if { ssl_fc_sni -i theses-doctorat.u-paris.fr }
+	use_backend apps-bu-test_app_u-paris_fr_ssl           if { ssl_fc_sni -i apps-bu-dbm-test.app.u-paris.fr }
+	use_backend apps-bu-test_app_u-paris_fr_ssl           if { ssl_fc_sni -i planningbiblio-test.app.u-paris.fr }
+	use_backend apps-bu-test_app_u-paris_fr_ssl           if { ssl_fc_sni -i theses-doctorat-test.u-paris.fr }
+	use_backend auth-dev-dev_app_u-paris.fr_ssl           if { ssl_fc_sni -i auth-dev-dev.app.u-paris.fr }
+	use_backend auth-ose_app_u-paris_fr_ssl               if { hdr(host) -i auth-ose.app.u-paris.fr }
+	use_backend auth-osetest_app_u-paris_fr_ssl           if { hdr(host) -i auth-osetest.app.u-paris.fr }
+	use_backend autht1_app_u-paris_fr_ssl                 if { hdr(host) -i autht1.app.u-paris.fr }
+	use_backend auth_u-paris_fr_ssl                       if { hdr(host) -i auth.u-paris.fr }
+    use_backend bfa_u-paris_fr_ssl                        if { hdr(host) -i bfa.u-paris.fr }
+	use_backend bomgar_support_u75_fr_ssl                 if { ssl_fc_sni -i support.app.u-paris.fr }
+	use_backend box_u75_fr_ssl                            if { ssl_fc_sni -i box.u75.fr }
+	use_backend cartetu_app_u-paris_fr_ssl                if { ssl_fc_sni -i cartetu.app.u-paris.fr }
+	use_backend compte_app_u-paris_fr                     if { hdr(Host) -i compte.app.u-paris.fr }
+	use_backend ecos_app_u-paris_fr_ssl                   if { ssl_fc_sni -i ecos.app.u-paris.fr }
+	use_backend ecos-test_app_u-paris_fr_ssl              if { ssl_fc_sni -i ecos-test.app.u-paris.fr }
+	use_backend eila-tools_app_u-paris_fr_ssl             if { ssl_fc_sni -i eila-tools.app.u-paris.fr }
+	use_backend eila-tools-test_app_u-paris_fr_ssl        if { ssl_fc_sni -i eila-tools-test.app.u-paris.fr }
+	use_backend elections_app_u-paris_fr_ssl              if { ssl_fc_sni -i elections.app.u-paris.fr }
+    use_backend elecnano_u-paris_fr_ssl                   if { ssl_fc_sni -i elecnano.u-paris.fr }
+    use_backend enquete_u-paris_fr_ssl					  if { hdr(Host) -i enquete.u-paris.fr }
+	use_backend epfolio_app_u-paris_fr_ssl                if { ssl_fc_sni -i epfolio.app.u-paris.fr }
+	use_backend epfolio-test_app_u-paris_fr_ssl           if { ssl_fc_sni -i epfolio-test.app.u-paris.fr }
+	use_backend epfolio-sandbox_app_u-paris_fr_ssl           if { ssl_fc_sni -i epfolio-sandbox.app.u-paris.fr }
+	use_backend ezproxy_u-paris_fr_ssl                    if { ssl_fc_sni_end -i ezproxy.u-paris.fr }
+	use_backend gl1_app_u-paris_fr_ssl                    if { ssl_fc_sni -i gl1.app.u-paris.fr }
+    use_backend gl1-test_app_u-paris_fr_ssl               if { ssl_fc_sni -i gl1-test.app.u-paris.fr }
+	use_backend glpi_app_u-paris_fr_ssl                   if { hdr(host) -i glpi.app.u-paris.fr }
+	use_backend glpi-test_app_u-paris_fr_ssl              if { hdr(host) -i glpi-test.app.u-paris.fr }
+	use_backend help_app_u-paris_fr_ssl                   if { hdr(host) -i help.app.u-paris.fr }
+	use_backend help-dev_app_u-paris_fr_ssl               if { hdr(host) -i help-dev.app.u-paris.fr }
+	# For GLPI / HELP Maintenance & Upgrades
+	use_backend msginfotmp_ssl                            if { hdr(host) -i help-tmp.app.u-paris.fr }
+	#use_backend help_app_u-paris_fr_ssl                  if { hdr(host) -i help-tmp.app.u-paris.fr }
+	#use_backend msginfotmp_ssl                           if { hdr(host) -i help.app.u-paris.fr }
+	use_backend ipweb_app_u-paris_fr_ssl                  if { hdr(Host) -i ipweb.app.u-paris.fr } { path_beg /ipweb }
+	use_backend ipweb-test_app_u-paris_fr_ssl             if { hdr(Host) -i ipweb-test.app.u-paris.fr } { path_beg /ipweb }
+	use_backend listes_u-paris_fr_ssl                     if { ssl_fc_sni -i listes.u-paris.fr }
+	use_backend livestat_u-paris_fr_ssl                   if { ssl_fc_sni -i livestat.u-paris.fr }
+	use_backend livestat_u-paris_fr_ssl                   if { ssl_fc_sni -i livestat.parisdescartes.fr }
+	use_backend mdw_prod_0_wss                            if { hdr(Host) -i mondossierweb.app.u-paris.fr } { hdr(Connection) -i upgrade } { hdr(Upgrade) -i websocket }
+	use_backend mdw_prod_1_ssl                            if { hdr(Host) -i mondossierweb.app.u-paris.fr }
+	use_backend octaves_app_uparis_fr_ssl                 if { ssl_fc_sni -i octaves.app.u-paris.fr }
+	use_backend octaves-test_app_uparis_fr_ssl            if { ssl_fc_sni -i octaves-test.app.u-paris.fr }
+	use_backend sinchro_app_uparis_fr_ssl                 if { ssl_fc_sni -i sinchro.app.u-paris.fr }
+	use_backend sinchro-test_app_uparis_fr_ssl            if { ssl_fc_sni -i sinchro-test.app.u-paris.fr }
+	use_backend odf_ed_dev1                               if { hdr(Host) -i editodf-dev.u-paris.fr }
+	use_backend odf_ed_prod1                              if { hdr(Host) -i editodf.u-paris.fr }
+	use_backend odf_ed_test1                              if { hdr(Host) -i editodf-test.u-paris.fr }
+	use_backend odf_pub_dev1                              if { hdr(Host) -i odf-dev.u-paris.fr }
+	use_backend odf_pub_prod1                             if { hdr(Host) -i odf.u-paris.fr }
+	use_backend odf_pub_test1                             if { hdr(Host) -i odf-test.u-paris.fr }
+	use_backend ojs_app_u-paris.fr_ssl                    if { hdr(Host) -i ojs.app.u-paris.fr }
+	use_backend ojs_preprod_u-paris.fr_ssl                if { hdr(Host) -i ojs-preprod.u-paris.fr }
+	use_backend ojs_preprod_u-paris.fr_ssl                if { hdr(Host) -i ojs-journal1.u-paris.fr }
+	use_backend lpasser-test_app_u-paris.fr_ssl           if { hdr(Host) -i lpasser-test.app.u-paris.fr }
+	use_backend lpasser_app_u-paris.fr_ssl                if { hdr(Host) -i lpasser.app.u-paris.fr }
+	use_backend mescours.app.u-paris.fr_ssl               if { hdr(Host) -i mescours.app.u-paris.fr }
+	use_backend ms-lp-api-test_app_u-paris.fr_ssl         if { hdr(Host) -i ms-lp-api-test.app.u-paris.fr }
+	use_backend ms-lp-api_app_u-paris.fr_ssl              if { hdr(Host) -i ms-lp-api.app.u-paris.fr }
+	use_backend opus_u-paris.fr_ssl                       if { hdr(Host) -i opus.u-paris.fr }
+	use_backend omp-preprod_u-paris.fr_ssl                if { hdr(Host) -i omp-preprod.u-paris.fr }
+	use_backend ojs_app_u-paris.fr_ssl                    if { hdr(Host) -i emerging-neurologist.org }
+	use_backend ojs_app_u-paris.fr_ssl                    if { hdr(Host) -i jeeses.org }
+	use_backend ose-formas_ssl                            if { ssl_fc_sni -i ose-form.app.u-paris.fr }
+	use_backend ose-preas_ssl                             if { ssl_fc_sni -i ose-test.app.u-paris.fr }
+	use_backend ose-proas_ssl                             if { ssl_fc_sni -i ose.app.u-paris.fr }
+	use_backend paces_app_u-paris_fr_ssl                  if { ssl_fc_sni -i paces.app.u-paris.fr } { path_beg /pacesweb }
+	use_backend paces-test_app_u-paris_fr_ssl             if { ssl_fc_sni -i paces-test.app.u-paris.fr } { path_beg /pacesweb }
+    use_backend paces-test_app_u-paris_fr_ssl             if { ssl_fc_sni -i paces-test.app.u-paris.fr } { path_beg /pacesmaj }
+	use_backend pay_app_u-paris_fr_0_paybox               if { ssl_fc_sni -i pay.app.u-paris.fr } { path_beg /pay/payboxcallback }
+	use_backend pay_app_u-paris_fr_1_wss                  if { ssl_fc_sni -i pay.app.u-paris.fr } { hdr(Connection) -i upgrade } { hdr(Upgrade) -i websocket }
+	use_backend pay_app_u-paris_fr_2_ssl                  if { ssl_fc_sni -i pay.app.u-paris.fr }
+	use_backend pay-test_app_u-paris_fr_0_paybox          if { ssl_fc_sni -i pay-test.app.u-paris.fr } { path_beg /pay/payboxcallback }
+	use_backend pay-test_app_u-paris_fr_1_wss             if { ssl_fc_sni -i pay-test.app.u-paris.fr } { hdr(Connection) -i upgrade } { hdr(Upgrade) -i websocket }
+	use_backend pay-test_app_u-paris_fr_2_ssl             if { ssl_fc_sni -i pay-test.app.u-paris.fr }
+	use_backend phare-auth-prod_app_uparis_fr_ssl         if { ssl_fc_sni -i auth-dev.app.u-paris.fr }
+	use_backend phare-auth-test_app_uparis_fr_ssl         if { ssl_fc_sni -i auth-dev-test.app.u-paris.fr }
+	use_backend phare-osc-back-prod_app_uparis_fr_ssl     if { ssl_fc_sni -i ms-phare-candidature.app.u-paris.fr }
+	use_backend phare-osc-back-prod_app_uparis_fr_ssl     if { ssl_fc_sni -i ms-phare-gse.app.u-paris.fr }
+	use_backend phare-osc-back-prod_app_uparis_fr_ssl     if { ssl_fc_sni -i ms-phare-gsf.app.u-paris.fr }
+	use_backend phare-osc-back-prod_app_uparis_fr_ssl     if { ssl_fc_sni -i ms-phare-poste.app.u-paris.fr }
+	use_backend phare-osc-back-prod_app_uparis_fr_ssl     if { ssl_fc_sni -i ms-phare-profil.app.u-paris.fr }
+	use_backend phare-osc-back-test_app_uparis_fr_ssl     if { ssl_fc_sni -i ms-phare-candidature-test.app.u-paris.fr }
+	use_backend phare-osc-back-test_app_uparis_fr_ssl     if { ssl_fc_sni -i ms-phare-gse-test.app.u-paris.fr }
+	use_backend phare-osc-back-test_app_uparis_fr_ssl     if { ssl_fc_sni -i ms-phare-gsf-test.app.u-paris.fr }
+	use_backend phare-osc-back-test_app_uparis_fr_ssl     if { ssl_fc_sni -i ms-phare-poste-test.app.u-paris.fr }
+	use_backend phare-osc-back-test_app_uparis_fr_ssl     if { ssl_fc_sni -i ms-phare-profil-test.app.u-paris.fr }
+	use_backend phare-osc-front-prod_app_uparis_fr_ssl    if { ssl_fc_sni -i emploi.u-paris.fr }
+	use_backend phare-osc-front-test_app_uparis_fr_ssl    if { ssl_fc_sni -i emploi-test.app.u-paris.fr }
+	use_backend pjweb_app_u-paris_fr_ssl                  if { hdr(Host) -i pjweb.app.u-paris.fr } { path_beg /pjweb }
+	use_backend pjweb-test_app_u-paris_fr_ssl             if { hdr(Host) -i pjweb-test.app.u-paris.fr } { path_beg /pjweb }
+	use_backend primo_app_u-paris_fr_ssl                  if { hdr(Host) -i primo.app.u-paris.fr } { path_beg /primo }
+	use_backend primo-test_app_u-paris_fr_ssl             if { hdr(Host) -i primo-test.app.u-paris.fr } { path_beg /primo }
+	use_backend prineo_app_u-paris_fr_ssl                 if { ssl_fc_sni -i prineo.app.u-paris.fr }
+    use_backend prineo-bo_app_u-paris_fr_ssl              if { ssl_fc_sni -i prineo-bo.app.u-paris.fr }
+	use_backend pstage_app_u-paris_fr_ssl                 if { hdr(Host) -i pstage.app.u-paris.fr } { path_beg /esup-pstage/ }
+	use_backend pstage-test2_app_u-paris_fr_ssl           if { hdr(Host) -i pstage-test2.app.u-paris.fr } { path_beg /esup-pstage/ }
+	use_backend pstage-test_app_u-paris_fr_ssl            if { hdr(Host) -i pstage-test.app.u-paris.fr } { path_beg /esup-pstage/ }
+	use_backend rdv_app_u-paris_fr_ssl                    if { ssl_fc_sni -i rdv.app.u-paris.fr }
+	use_backend reins_app_u-paris_fr_ssl                  if { hdr(Host) -i reins.app.u-paris.fr } { path_beg /reins }
+	use_backend reins-test_app_u-paris_fr_ssl             if { hdr(Host) -i reins-test.app.u-paris.fr } { path_beg /reins }
+	use_backend swn_app_u-paris_fr_ssl                    if { ssl_fc_sni -i snw.app.u-paris.fr } { path_beg /snw-web }  
+	use_backend swn-test_app_u-paris_fr_ssl               if { ssl_fc_sni -i snw-test.app.u-paris.fr } { path_beg /snw-web }
+	use_backend scola_app_u-paris_fr_ssl                  if { ssl_fc_sni -i scola.app.u-paris.fr }
+	use_backend scola-prep_app_u-paris_fr_ssl             if { ssl_fc_sni -i scola-prep.app.u-paris.fr }
+	use_backend sondage_app_u-paris_fr_ssl                if { ssl_fc_sni -i sondage.app.u-paris.fr }
+	use_backend sondage-test_app_u-paris_fr_ssl           if { ssl_fc_sni -i sondage-test.app.u-paris.fr }
+	use_backend papi_app_u-paris_fr_ssl                   if { ssl_fc_sni -i papi.app.u-paris.fr }
+	use_backend papi-test_app_u-paris_fr_ssl              if { ssl_fc_sni -i papi-test.app.u-paris.fr }
+	use_backend sportbox_app_u-paris_fr_ssl               if { ssl_fc_sni -i sportbox.app.u-paris.fr }
+	use_backend sportbox-test_app_u-paris_fr_ssl          if { ssl_fc_sni -i sportbox-test.app.u-paris.fr }
+    use_backend stage-test_app_u-paris_fr_ssl          if { ssl_fc_sni -i stage-test.app.u-paris.fr }
+    use_backend stage-prod_app_u-paris_fr_ssl          if { ssl_fc_sni -i stage-prod.app.u-paris.fr }
+	use_backend sud_app_u-paris_fr_ssl                    if { ssl_fc_sni -i sud.app.u-paris.fr }
+	use_backend support_dsin_u-paris_fr_ssl               if { ssl_fc_sni -i support.dsin.u-paris.fr }
+	use_backend support_test_dsin_u-paris_fr_ssl          if { ssl_fc_sni -i support-test.dsin.u-paris.fr }
+	use_backend u-paris_fr_ssl                            if { ssl_fc_sni -i u-paris.fr }
+	use_backend u-paris_fr_ssl                            if { ssl_fc_sni -i www.u-paris.fr }
+	use_backend wiki_dsin_u-paris_fr_ssl                  if { ssl_fc_sni -i wiki.dsin.u-paris.fr }
+	use_backend webfarm-prod_app_u-paris_fr_ssl           if { hdr(Host) -f /etc/haproxy/sites_webfarm_prod.lst }
+	use_backend webfarm-test_app_u-paris_fr_ssl           if { hdr(Host) -f /etc/haproxy/sites_webfarm_test.lst }
+	use_backend webfarm-coloc-test_app_u-paris_fr_ssl     if { hdr(Host) -f /etc/haproxy/sites_webfarm_coloc_test.lst }
+        use_backend inception_preprod_u-paris.fr_ssl          if { hdr(Host) -i inception-preprod.u-paris.fr }
+        use_backend inception_prod_u-paris.fr_ssl             if { hdr(Host) -i inception.u-paris.fr }
+
+	default_backend error403_backend
+
+## -------- backends sorted
+backend activation_app_u-paris_fr_ssl
+	option forwardfor
+	server activation-proas activation-proas.si.u75.fr:443 ssl verify none
+
+backend activation-test_app_u-paris_fr_ssl
+	option forwardfor
+	server activation-preas activation-preas.si.u75.fr:443 ssl verify none
+
+backend adeconsult.app.u-paris.fr_ssl
+	option forwardfor
+	timeout server 2m
+	# pour le connecteur AJP
+	server proxy-app-priv1 proxy-app-priv1.infra.u-paris.fr:443 ssl verify none
+
+backend adfs_u-paris_fr_ssl
+	option forwardfor
+	balance roundrobin
+	cookie UPADFSID insert nocache indirect secure
+	server adfs1 prg-og2-adfs01.infra.u75.fr:443 ssl verify none sni ssl_fc_sni cookie adfs1
+	server adfs2 stp-brc2-adfs01.infra.u75.fr:443 ssl verify none sni ssl_fc_sni cookie adfs2
+
+backend amethis_app_u-paris_fr_ssl
+	option forwardfor
+	server amethis-prod amethis-prod.si.u75.fr:443 ssl verify none
+
+backend amethis-collector_app_u-paris_fr_ssl
+	option forwardfor
+	timeout server 300s
+	server amethis-collector-prod amethis-collector-prod.si.u75.fr:443 ssl verify none
+
+backend amethis-collector-test_app_u-paris_fr_ssl
+	option forwardfor
+	timeout server 300s
+	server amethis-collector-test amethis-collector-test.si.u75.fr:443 ssl verify none
+
+backend amethis-test_app_u-paris_fr_ssl
+	option forwardfor
+	server amethis-test amethis-test.si.u75.fr:443 ssl verify none
+
+backend amethis-dev_app_u-paris_fr_ssl
+    option forwardfor
+    server amethis-dev amethis-dev.si.u75.fr:443 ssl verify none
+
+backend amethis-dev1_app_u-paris_fr_ssl
+    option forwardfor
+    server amethis-dev1 amethis-dev1.si.u75.fr:443 ssl verify none
+
+backend analyse_u-paris_fr_ssl 
+    option forwardfor
+    server papi-test sphinx-prod.si.u75.fr:443 ssl verify none
+
+backend anibio_app_u-paris_fr_ssl 
+	option forwardfor
+	server anibio-proas anibio-proas.si.u75.fr:443 ssl verify none
+
+backend apo-connect_app_u-paris_fr_ssl
+	option forwardfor
+	server apo-connect-prod apo-connect-prod.si.u75.fr:8443 ssl verify none
+
+backend apo-connect-test_app_u-paris_fr_ssl
+	option forwardfor
+	server apo-connect-test apo-connect-test.si.u75.fr:8443 ssl verify none
+
+backend apo-utils_app_u-paris_fr_ssl
+	option forwardfor
+	server apo-utils-prod apo-utils-prod.si.u75.fr:443 ssl verify none
+
+backend apps-bu-app_u-paris_fr_ssl  
+	option forwardfor
+	server apps-bu-prod apps-bu-prod.dbm.u75.fr:443 ssl verify none
+
+backend apps-bu-test_app_u-paris_fr_ssl    
+	option forwardfor
+	server apps-bu-test apps-bu-test.dbm.u75.fr:443 ssl verify none
+
+# [dsin #82762]
+backend apps-bu-gedfs_u-paris_fr_ssl
+	option forwardfor
+	http-request replace-header Host .* app.parisdescartes.fr
+	server gedfs-parisdescartes app.parisdescartes.fr:443 ssl verify none
+
+backend auth-dev-dev_app_u-paris.fr_ssl
+	option forwardfor
+	# [help #9343] instance de dev sur la VM de prod aussi
+	server keycloak-prod keycloak-prod.si.u75.fr:8443 ssl verify none
+
+backend auth-ose_app_u-paris_fr_ssl
+	option forwardfor
+	server auth-ose auth-oseprod.si.u75.fr:443 ssl verify none
+
+backend auth-osetest_app_u-paris_fr_ssl
+	option forwardfor
+	server auth-osetest auth-osetest.si.u75.fr:443 ssl verify none
+
+backend autht1_app_u-paris_fr_ssl
+	option forwardfor
+	server autht1 autht1.si.u75.fr:443 ssl verify none
+
+backend auth_u-paris_fr
+	# uniquement pour Let's Encrypt, sinon on pourra faire la redirection http -> https directement ici
+	option forwardfor
+	server auth-prod1 auth-prod1.si.u75.fr:80
+
+backend auth_u-paris_fr_ssl
+	option forwardfor
+	server auth-prod1 auth-prod1.si.u75.fr:443 ssl verify none
+
+backend bfa_u-paris_fr_ssl
+    option forwardfor
+    server bfa webfarm-coloc-prod.si.u75.fr:443 ssl verify none
+
+backend bomgar_support_u75_fr_ssl
+	option forwardfor
+	server bomgar bomgar-vip.support.u75.fr:443 ssl verify none
+
+backend box_u75_fr
+	option forwardfor
+	server box box-01.u75.fr:80
+
+backend box_u75_fr_ssl
+	option forwardfor
+	server box box-01.u75.fr:443 ssl verify none
+
+backend cartetu_app_u-paris_fr_ssl
+	option forwardfor
+	server cartetu cartetu-prod.si.u75.fr:443 ssl verify none
+
+backend compte_app_u-paris_fr
+	option forwardfor
+	server midpoint-proas1 midpoint-proas1.si.u75.fr:8080
+
+backend ipweb_app_u-paris_fr_ssl
+	option forwardfor
+	server apo-ip-prod apo-ip-prod.si.u75.fr:8443 ssl verify none
+
+backend ipweb-test_app_u-paris_fr_ssl
+	option forwardfor
+	server apo-ip-test apo-ip-test.si.u75.fr:8443 ssl verify none
+
+backend ecandidat_app_u-paris_fr_0_wss
+	option forwardfor
+	timeout tunnel 300s
+	option http-server-close
+	option forceclose
+	no option httpclose
+	server ecandidat-prod apo-ec1-prod.si.u75.fr:8443 ssl verify none
+
+backend ecandidat_app_u-paris_fr_0_wss-2
+	option forwardfor
+	timeout tunnel 300s
+	option http-server-close
+	option forceclose
+	no option httpclose
+	server ecandidat-prod-2 apo-ec2-prod.si.u75.fr:8443 ssl verify none
+
+backend ecandidat_app_u-paris_fr_1_ssl
+	option forwardfor
+	server ecandidat-prod apo-ec1-prod.si.u75.fr:8443 ssl verify none
+
+backend ecandidat_app_u-paris_fr_1_ssl-2
+	option forwardfor
+	server ecandidat-prod-2 apo-ec2-prod.si.u75.fr:8443 ssl verify none
+
+backend ecandidat-test_app_u-paris_fr_0_wss
+	option forwardfor
+	timeout tunnel 300s
+	option http-server-close
+	option forceclose
+	no option httpclose
+	server ecandidat-test apo-ec1-test.si.u75.fr:8443 ssl verify none
+
+backend ecandidat-test_app_u-paris_fr_1_ssl
+	option forwardfor
+	server ecandidat-test apo-ec1-test.si.u75.fr:8443 ssl verify none
+
+backend ecos_app_u-paris_fr_ssl 
+	option forwardfor
+	server ecos ecos-prod.si.u75.fr:443 ssl verify none
+
+backend ecos-test_app_u-paris_fr_ssl
+	option forwardfor
+	server ecos-test ecos-test.si.u75.fr:443 ssl verify none
+
+backend eila-tools_app_u-paris_fr_ssl
+	option forwardfor
+	server eila-tools-prod eila-tools-prod.si.u75.fr:443 ssl verify none
+
+backend eila-tools-test_app_u-paris_fr_ssl
+	option forwardfor
+	server eila-tools-test eila-tools-test.si.u75.fr:443 ssl verify none
+
+backend elections_app_u-paris_fr_ssl
+	option forwardfor
+	server webapp2 webapp2-prod.si.u75.fr:443 ssl verify none
+
+backend elecnano_u-paris_fr_ssl
+    option forwardfor
+    server elecnano webfarm-coloc-prod.si.u75.fr:443 ssl verify none
+
+backend enquete_u-paris_fr_ssl
+    option forwardfor
+    server sphinx-prod sphinx-prod.si.u75.fr:443 ssl verify none
+
+backend epfolio_app_u-paris_fr_ssl
+	option forwardfor
+	balance roundrobin
+	cookie EPFOLIOID insert nocache indirect secure
+	server epfolio-prodft1 epfolio-prodft1.si.u75.fr ssl verify none cookie epfoliot1
+	server epfolio-prodft2 epfolio-prodft2.si.u75.fr ssl verify none cookie epfoliot2
+
+# [dsin #83150]
+backend epfolio-test_app_u-paris_fr_ssl
+	option forwardfor
+	balance roundrobin
+	cookie EPFOLIOID insert nocache indirect secure
+	server epfolio-testft1 epfolio-testft1.si.u75.fr ssl verify none cookie epfoliot1
+	server epfolio-testft2 epfolio-testft2.si.u75.fr ssl verify none cookie epfoliot2
+
+backend epfolio-sandbox_app_u-paris_fr_ssl
+	option forwardfor
+	balance roundrobin
+	cookie EPFOLIOID insert nocache indirect secure
+	server epfolio-sandboxft1 epfolio-sandboxft1.si.u75.fr ssl verify none cookie epfoliot1
+
+backend ezproxy_u-paris_fr
+	option forwardfor
+	server ezproxy-prod1 ezproxy-prod1.dbm.u75.fr:8080
+
+backend ezproxy_u-paris_fr_ssl
+	option forwardfor
+	reqadd X-Forwarded-Proto:\ https
+	server ezproxy-prod1 ezproxy-prod1.dbm.u75.fr:8443 ssl verify none
+
+backend gl1_app_u-paris_fr_ssl
+	option forwardfor
+	timeout server 600s
+	server gl1 gl1-prod.si.u75.fr:443 ssl verify none
+
+backend gl1-test_app_u-paris_fr_ssl
+    option forwardfor
+    timeout server 600s
+    server gl1-test gl1-test.si.u75.fr:443 ssl verify none
+
+backend glpi_app_u-paris_fr_ssl
+	option forwardfor
+	server glpip1 glpip1.si.u75.fr:443 ssl verify none
+
+backend glpi-test_app_u-paris_fr_ssl
+	option forwardfor
+	server glpit1 glpit1.si.u75.fr:443 ssl verify none
+
+backend help_app_u-paris_fr_ssl
+	option forwardfor
+	server glpi-prod1 glpi-prod1.si.u75.fr:443 ssl verify none
+
+backend help-dev_app_u-paris_fr_ssl
+	option forwardfor
+	server glpi-dev1 glpi-dev1.si.u75.fr:443 ssl verify none
+
+backend inception_preprod_u-paris.fr_ssl 
+    option forwardfor
+    server inception-preprod inception-preprod.si.u75.fr:443 ssl verify none
+
+backend inception_prod_u-paris.fr_ssl 
+    option forwardfor
+    server inception-prod inception-prod.si.u75.fr:443 ssl verify none
+
+
+backend listes_u-paris_fr_ssl
+	option forwardfor
+	server sympa-prod1 sympa-prod1.si.u75.fr:443 ssl verify none
+
+backend livestat_u-paris_fr_ssl
+	option forwardfor
+	server livestat livestat.si.u75.fr:443 ssl verify none
+
+backend mdw_prod_0_wss
+	mode http
+	timeout tunnel 300s
+	option forwardfor
+	option http-server-close
+	option forceclose
+	no option httpclose
+
+	http-request deny if !{ hdr(Connection) -i upgrade } !{ hdr(Upgrade) -i websocket }
+
+	balance roundrobin
+	cookie UPLBID insert nocache indirect secure
+	server mdw1 apo-mdw-prod.si.u75.fr:8541 ssl verify none cookie mdw1 check
+	server mdw2 apo-mdw-prod.si.u75.fr:8542 ssl verify none cookie mdw2 check
+	server mdw3 apo-mdw-prod.si.u75.fr:8543 ssl verify none cookie mdw3 check
+	server mdw4 apo-mdw-prod.si.u75.fr:8544 ssl verify none cookie mdw4 check
+
+backend mdw_prod_1_ssl
+	option forwardfor
+	reqadd X-Forwarded-Proto:\ https
+
+	balance roundrobin
+	cookie UPLBID insert nocache indirect secure
+	server mdw1 apo-mdw-prod.si.u75.fr:8541 ssl verify none cookie mdw1 check
+	server mdw2 apo-mdw-prod.si.u75.fr:8542 ssl verify none cookie mdw2 check
+	server mdw3 apo-mdw-prod.si.u75.fr:8543 ssl verify none cookie mdw3 check
+	server mdw4 apo-mdw-prod.si.u75.fr:8544 ssl verify none cookie mdw4 check
+
+backend mescours.app.u-paris.fr_ssl
+	option forwardfor
+	timeout server 2m
+	# pour le connecteur AJP
+	server proxy-app-priv1 proxy-app-priv1.infra.u-paris.fr:443 ssl verify none
+
+backend msginfotmp_ssl
+	option forwardfor
+	server msginfotmp msginfotmp.si.u75.fr:443 ssl verify none
+
+backend odf_ed_dev1
+	option forwardfor
+	server ametyseditodf-dev1 ametyseditodf-dev1.si.u75.fr:80
+
+backend odf_ed_prod1
+	option forwardfor
+	server ametyseditodf-prod1 ametyseditodf-prod1.si.u75.fr:80
+
+backend odf_ed_test1
+	option forwardfor
+	server ametyseditodf-test1 ametyseditodf-test1.si.u75.fr:80
+
+backend odf_pub_dev1
+	option forwardfor
+	server ametysodf-dev1 ametysodf-dev1.si.u75.fr:80
+
+backend odf_pub_prod1
+	option forwardfor
+	server ametysodf-prod1 ametysodf-prod1.si.u75.fr:80
+
+backend odf_pub_test1
+	option forwardfor
+	server ametysodf-test1 ametysodf-test1.si.u75.fr:80
+
+backend ojs_app_u-paris.fr_ssl
+    option forwardfor
+    server ojs-app-prod ojs-app-prod.si.u75.fr:443 ssl verify none
+
+backend ojs_preprod_u-paris.fr_ssl
+    option forwardfor
+    server ojs-app-preprod ojs-app-preprod.si.u75.fr:443 ssl verify none
+	
+backend lpasser-test_app_u-paris.fr_ssl
+    option forwardfor
+    server lpasser-front-test lpasser-front-test.si.u75.fr:443 ssl verify none
+
+backend lpasser_app_u-paris.fr_ssl
+    option forwardfor
+    server lpasser-front-prod lpasser-front-prod.si.u75.fr:443 ssl verify none
+
+backend ms-lp-api-test_app_u-paris.fr_ssl
+    option forwardfor
+    server lpasser-back-test lpasser-back-test.si.u75.fr:443 ssl verify none
+
+backend ms-lp-api_app_u-paris.fr_ssl
+    option forwardfor
+    server lpasser-back-prod lpasser-back-prod.si.u75.fr:443 ssl verify none
+
+backend omp-preprod_u-paris.fr_ssl
+    option forwardfor
+    server omp-app-preprod omp-app-preprod.si.u75.fr:443 ssl verify none	
+
+backend opus_u-paris.fr_ssl
+    option forwardfor
+    server omp-app-prod omp-app-prod.si.u75.fr:443 ssl verify none
+
+backend ose-formas_ssl
+	option forwardfor
+	server ose-formas ose-formas.si.u75.fr:443 ssl verify none
+
+backend ose-preas_ssl
+	option forwardfor
+	server ose-preas ose-preas.si.u75.fr:443 ssl verify none
+
+backend ose-proas_ssl
+	option forwardfor
+	server ose-proas ose-proas.si.u75.fr:443 ssl verify none
+
+backend paces_app_u-paris_fr_ssl
+	option forwardfor
+	server apo-paces-prod apo-paces-prod.si.u75.fr:443 ssl verify none
+
+backend paces-test_app_u-paris_fr_ssl
+	option forwardfor
+	server apo-paces-test apo-paces-test.si.u75.fr:443 ssl verify none
+
+backend pay_app_u-paris_fr_0_paybox
+	option forwardfor
+	http-request deny if !{ src 194.2.122.158 } !{ src 194.2.122.190 } !{ src 195.101.99.76 } !{ src 195.25.7.166 } !{ src 195.25.67.22 }
+	server pay-prod pay-prod.si.u75.fr:8443 ssl verify none
+
+backend pay_app_u-paris_fr_1_wss
+	mode http
+	timeout tunnel 300s
+	option forwardfor
+	option http-server-close
+	option forceclose
+	no option httpclose
+
+	http-request deny if !{ hdr(Connection) -i upgrade } !{ hdr(Upgrade) -i websocket }
+
+	server pay-prod pay-prod.si.u75.fr:8443 ssl verify none
+
+backend pay_app_u-paris_fr_2_ssl
+	option forwardfor
+	server pay-prod pay-prod.si.u75.fr:8443 ssl verify none
+
+backend pay-test_app_u-paris_fr_0_paybox
+	option forwardfor
+	http-request deny if !{ src 194.2.122.158 } !{ src 194.2.122.190 } !{ src 195.101.99.76 } !{ src 195.25.7.166 } !{ src 195.25.67.22 }
+	server pay-test pay-test.si.u75.fr:8443 ssl verify none
+
+backend pay-test_app_u-paris_fr_1_wss
+	mode http
+	timeout tunnel 300s
+	option forwardfor
+	option http-server-close
+	option forceclose
+	no option httpclose
+
+	http-request deny if !{ hdr(Connection) -i upgrade } !{ hdr(Upgrade) -i websocket }
+
+	server pay-test pay-test.si.u75.fr:8443 ssl verify none
+
+backend pay-test_app_u-paris_fr_2_ssl
+	option forwardfor
+	server pay-test pay-test.si.u75.fr:8443 ssl verify none
+
+backend octaves_app_uparis_fr_ssl
+	option forwardfor
+	server octaves-prod octaves-prod.si.u75.fr:443 ssl verify none
+
+backend octaves-test_app_uparis_fr_ssl
+	option forwardfor
+	server octaves-test octaves-test.si.u75.fr:443 ssl verify none
+
+backend sinchro_app_uparis_fr_ssl
+    option forwardfor
+    server sinchro-prodas sinchro-prodas.si.u75.fr:443 ssl verify none
+
+backend sinchro-test_app_uparis_fr_ssl
+    option forwardfor
+    server sinchro-testas sinchro-testas.si.u75.fr:443 ssl verify none
+
+backend phare-auth-test_app_uparis_fr_ssl
+	option forwardfor
+	server phare-auth-test phare-auth-test.si.u75.fr:443 ssl verify none
+
+backend phare-osc-back-test_app_uparis_fr_ssl
+	option forwardfor
+	server phare-osc-back-test phare-osc-back-test.si.u75.fr:443 ssl verify none
+
+backend phare-osc-front-test_app_uparis_fr_ssl
+	option forwardfor
+	server phare-osc-front-test phare-osc-front-test.si.u75.fr:443 ssl verify none
+
+backend phare-auth-prod_app_uparis_fr_ssl
+	option forwardfor
+	server phare-auth-prod phare-auth-prod.si.u75.fr:443 ssl verify none
+
+backend phare-osc-back-prod_app_uparis_fr_ssl
+	option forwardfor
+	server phare-osc-back-prod phare-osc-back-prod.si.u75.fr:443 ssl verify none
+
+backend phare-osc-front-prod_app_uparis_fr_ssl
+	option forwardfor
+	server phare-osc-front-prod phare-osc-front-prod.si.u75.fr:443 ssl verify none
+
+backend pjweb_app_u-paris_fr_ssl
+	option forwardfor
+	server apo-pj-prod apo-pj-prod.si.u75.fr:8443 ssl verify none
+
+backend pjweb-test_app_u-paris_fr_ssl
+	option forwardfor
+	server apo-pj-test apo-pj-test.si.u75.fr:8443 ssl verify none
+
+backend primo_app_u-paris_fr_ssl
+	option forwardfor
+	server apo-primo-prod apo-primo-prod.si.u75.fr:8443 ssl verify none
+
+backend primo-test_app_u-paris_fr_ssl
+	option forwardfor
+	server apo-primo-test apo-primo-test.si.u75.fr:8443 ssl verify none
+
+backend prineo_app_u-paris_fr
+	option forwardfor
+	server prineo-p1 prineo-p1.si.u75.fr:80
+
+backend prineo_app_u-paris_fr_ssl
+	option forwardfor
+	server prineo-p1 prineo-p1.si.u75.fr:443 ssl verify none
+
+backend prineo-bo_app_u-paris_fr
+    option forwardfor
+    server prineo-p1 prineo-p1.si.u75.fr:80
+
+backend prineo-bo_app_u-paris_fr_ssl
+    option forwardfor
+    server prineo-p1 prineo-p1.si.u75.fr:443 ssl verify none
+
+backend pstage_app_u-paris_fr_ssl
+	option forwardfor
+	server pstage-proas2 pstage-proas2.si.u75.fr:8443 ssl verify none
+
+backend pstage-test_app_u-paris_fr_ssl
+	option forwardfor
+	server pstage-preas1 pstage-preas1.si.u75.fr:9443 ssl verify none
+
+backend pstage-test2_app_u-paris_fr_ssl
+	option forwardfor
+	server pstage-preas1 pstage-preas1.si.u75.fr:8443 ssl verify none
+
+backend rdv_app_u-paris_fr_ssl
+	option forwardfor
+	server rdv rdv-prod.si.u75.fr:443 ssl verify none
+
+backend reins_app_u-paris_fr_ssl
+	option forwardfor
+	server apo-reins-prod apo-reins-prod.si.u75.fr:8443 ssl verify none
+
+backend reins-test_app_u-paris_fr_ssl
+	option forwardfor
+	server apo-reins-test apo-reins-test.si.u75.fr:8443 ssl verify none
+
+backend swn_app_u-paris_fr_ssl
+	option forwardfor
+	server snw-web apo-utils-prod.si.u75.fr:8443 ssl verify none
+
+backend swn-test_app_u-paris_fr_ssl
+	option forwardfor
+	server snw-web apo-utils-test.si.u75.fr:8443 ssl verify none
+
+backend scola_app_u-paris_fr_ssl
+	option forwardfor
+	server scola scolap1.si.u75.fr:443 ssl verify none
+
+backend scola-prep_app_u-paris_fr_ssl
+	option forwardfor
+	server scola-prep scolat1.si.u75.fr:443 ssl verify none
+
+backend sondage_app_u-paris_fr_ssl
+	option forwardfor
+	server limesurvey-prod limesurvey-prod.si.u75.fr:443 ssl verify none
+
+backend sondage-test_app_u-paris_fr_ssl
+	option forwardfor
+	server limesurvey-test limesurvey-test.si.u75.fr:443 ssl verify none
+
+backend papi_app_u-paris_fr_ssl
+	option forwardfor
+	server papi papi-prod.si.u75.fr:443 ssl verify none
+
+backend papi-test_app_u-paris_fr_ssl
+	option forwardfor
+	server papi-test papi-test.si.u75.fr:443 ssl verify none
+
+backend sportbox_app_u-paris_fr_ssl
+	option forwardfor
+	server sportbox sportbox-prod.si.u75.fr:443 ssl verify none
+
+backend sportbox-test_app_u-paris_fr_ssl
+	option forwardfor
+	server sportbox-test sportbox-test.si.u75.fr:443 ssl verify none
+
+backend stage-test_app_u-paris_fr_ssl
+    option forwardfor
+    server stage-test stage-preas1.si.u75.fr:443 ssl verify none
+
+backend stage-prod_app_u-paris_fr_ssl
+    option forwardfor
+    server stage-prod stage-proas1.si.u75.fr:443 ssl verify none
+
+backend sud_app_u-paris_fr_ssl
+	option forwardfor
+	server sud sud-prod.si.u75.fr:443 ssl verify none
+
+backend support_test_dsin_u-paris_fr_ssl
+	option forwardfor
+	server support-test support-test.dsin.u75.fr:443 ssl verify none
+
+backend support_dsin_u-paris_fr_ssl
+	option forwardfor
+	server support support-prod.dsin.u75.fr:443 ssl verify none
+
+backend u-paris_fr
+	log global
+	option	httplog
+	option forwardfor
+	server www-01 www-01.u75.fr:80
+
+backend u-paris_fr_ssl
+	log global
+	option	httplog
+	option forwardfor
+	server www-01 www-01.u75.fr:443 ssl verify none
+
+backend webfarm-prod_app_u-paris_fr_ssl
+	option forwardfor
+	server webfarm-prod webfarm-app-prod.si.u75.fr:443 ssl verify none
+
+backend webfarm-test_app_u-paris_fr_ssl
+	option forwardfor
+	server webfarm-test webfarm-app-test.si.u75.fr:443 ssl verify none
+
+backend webfarm-coloc-test_app_u-paris_fr_ssl
+	option forwardfor
+	server webfarm-coloc-test webfarm-coloc-test.si.u75.fr:443 ssl verify none
+
+backend wiki_dsin_u-paris_fr_ssl
+	option forwardfor
+	server wiki wiki.dsin.u75.fr:443 ssl verify none
+
+## last resort
+backend error403_backend
+	mode http
+	errorfile 403 /etc/haproxy/errors/403.http
+
+# [dsin #1234]
+listen ssh-apps-bu-test-alma
+	bind :22001
+	mode tcp
+	timeout server 2m
+	option tcplog
+	option tcpka
+	acl exlibris src -f /etc/haproxy/ip_exlibris.lst
+	tcp-request connection reject if !exlibris
+	server apps-bu-test apps-bu-test.dbm.u75.fr:22
+
+# [dsin #1234]
+listen ssh-apps-bu-prod-alma
+	bind :22002
+	mode tcp
+	timeout server 2m
+	option tcplog
+	option tcpka
+	acl exlibris src -f /etc/haproxy/ip_exlibris.lst
+	tcp-request connection reject if !exlibris
+	server apps-bu-prod apps-bu-prod.dbm.u75.fr:22
+
+{% for host in ['cache01', 'cache02', 'cache03', 'collabora01', 'collabora02', 'front01', 'front02', 'maxscale01', 'maxscale02', 'sql01', 'sql02', 'sql03', 'storage', 'workers01', 'workers02'] %}
+# [dsin #56549]
+listen ssh-newcloud-{{ host }}-arawa
+	bind :{{ 22100 + loop.index0 }}
+	mode tcp
+	timeout tunnel 3600s
+	option tcplog
+	option tcpka
+	acl arawa src -f /etc/haproxy/ip_arawa.lst
+	tcp-request connection reject if !arawa { date gt {{ arawa_timestamps.start_timestamp }} } { date lt {{ arawa_timestamps.end_timestamp }} }
+	server newcloud-{{ host }} newcloud-{{ host }}.si.u75.fr:22
+
+{% endfor %}
+
+{% for host in ['cache01', 'cache02', 'cache03', 'collabora01', 'collabora02', 'collabora03', 'collabora04', 'collabora05', 'collabora06', 'front01', 'front02', 'maxscale01', 'maxscale02', 'sql01', 'sql02', 'sql03', 'storage', 'workers01', 'workers02', 'workers03', 'workers04'] %}
+# [dsin #56549]
+listen ssh-nextcloud-{{ host }}-arawa
+	bind :{{ 22200 + loop.index0 }}
+	mode tcp
+	timeout tunnel 3600s
+	option tcplog
+	option tcpka
+	acl arawa src -f /etc/haproxy/ip_arawa.lst
+	tcp-request connection reject if !arawa { date gt {{ arawa_timestamps.start_timestamp }} } { date lt {{ arawa_timestamps.end_timestamp }} }
+	server nextcloud-{{ host }} nextcloud-{{ host }}.si.u75.fr:22
+
+{% endfor %}

@@ -1,0 +1,69 @@
+# Création et déploiement d'un certificat
+#
+# Ce n'est pas plus mal de laisser la création locale, à cause de la dépendance sur pyOpenSSL récent (problème sur les vieux serveurs).
+# Partie avec le bundle spécifique aux hosts HAproxy, à généraliser et automatiser la signature sinon.
+#
+# Ajouter une procedure de renouvellement/regeneration, qui va lire un certificat existant et reprend son Subject et SAN.
+#
+# $ ansible-playbook -i hosts deploy_cert.yml -D -e "base=certfqdn orderid=id" # how-to
+#
+# $ ansible-playbook -i hosts deploy_cert.yml -D -e "base=certfqdn orderid=id san='DNS:fqdn1,DNS:fqdn2'" # how-to avec SAN
+#
+---
+- name: Creation et deploiement d'un certificat
+  hosts: all
+
+  vars:
+    certbundle: "cert+chain+key_{{ base | replace('.','_') }}_{{ orderid }}.crt"
+    cachain: "{{ chain | default('files/tmp/sectigo.pem') }}"
+    tmp: /tmp
+
+  tasks:
+
+    - name: cert key
+      local_action:
+        module: openssl_privatekey
+        path: '{{ tmp }}/{{ base }}.key.pem'
+        size: 2048
+      tags: req
+
+    - name: csr
+      local_action: 
+        module: openssl_csr
+        path: '{{ tmp }}/{{ base }}.csr.pem'
+        privatekey_path: '{{ tmp }}/{{ base }}.key.pem'
+        country_name: FR
+        locality_name: Paris
+        organization_name: UNIVERSITE de PARIS
+        organizational_unit_name: DSIN
+        common_name: '{{ base }}'
+        subject_alt_name: '{{ san | default(omit) }}'
+      tags: req
+
+    - name: cert
+      local_action:
+        module: stat
+        path: '{{ tmp }}/{{ base }}.pem'
+      register: certfile
+      tags: req
+
+    - name: cert
+      local_action:
+        module: fail
+        msg: "Faire signer {{ tmp }}/{{ base }}.csr.pem par DigiCert et télécharger le résultat dans {{ tmp }}/{{ base }}.pem"
+      when: not certfile.stat.exists
+      tags: req
+
+    - name: make cert bundle
+      local_action: shell cat {{ tmp }}/{{ base }}.pem {{ cachain }} {{ tmp }}/{{ base }}.key.pem > {{ tmp }}/{{ certbundle }}
+      tags: deploy
+
+    - name: deploy cert bundle
+      copy:
+       src: "{{ tmp }}/{{ certbundle }}"
+       dest: "/usr/local/etc/ssl/certs/haproxy/{{ certbundle }}"
+       owner: root
+       group: ssl-cert
+       mode: 0640
+      become: True
+      tags: deploy

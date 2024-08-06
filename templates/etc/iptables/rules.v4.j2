@@ -1,0 +1,23 @@
+*filter
+:INPUT ACCEPT [0:0]
+:FORWARD ACCEPT [0:0]
+:OUTPUT ACCEPT [4:432]
+-A INPUT -m state --state RELATED,ESTABLISHED -j ACCEPT
+-A INPUT -p icmp -j ACCEPT
+-A INPUT -i lo -j ACCEPT
+-A INPUT -p tcp -m state --state NEW -m tcp --dport 22 -j ACCEPT
+-A INPUT -p tcp -m state --state NEW -m tcp --dport 80 -j ACCEPT
+-A INPUT -p tcp -m state --state NEW -m tcp --dport 443 -j ACCEPT
+{% for ip in ip_exlibris | default([]) %}
+-A INPUT -p tcp -m state --state NEW -m tcp -s {{ ip }} --dport 22001:22002 -j ACCEPT
+{% endfor %}
+{% for ip in ip_arawa | default([]) %}
+-A INPUT -p tcp -m state --state NEW -m tcp -s {{ ip }} --dport 22100:22114 -j ACCEPT
+-A INPUT -p tcp -m state --state NEW -m tcp -s {{ ip }} --dport 22200:22220 -j ACCEPT
+{% endfor %}
+-A INPUT -p tcp -m conntrack --ctstate NEW -m tcp -s {{ ip_victoriametrics}} --dport 9500 -j ACCEPT
+-A INPUT -p tcp -m conntrack --ctstate NEW -m tcp -s {{ ip_victoriametrics}} --dport 9100 -j ACCEPT
+-A INPUT -j REJECT --reject-with icmp-host-prohibited
+-A FORWARD -j REJECT --reject-with icmp-host-prohibited
+COMMIT
+# EOF

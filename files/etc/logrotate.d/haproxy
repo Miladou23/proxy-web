@@ -1,0 +1,11 @@
+/var/log/haproxy.log {
+    daily
+    rotate 365
+    missingok
+    notifempty
+    compress
+    delaycompress
+    postrotate
+        /usr/sbin/syslog-ng-ctl reload >/dev/null 2>&1 || true
+    endscript
+}

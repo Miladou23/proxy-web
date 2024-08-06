@@ -1,0 +1,5 @@
+# vim: ft=yaml ts=2 sts=2 sw=2 expandtab:
+---
+- name: up_stash_file
+  src: 'git@gitlab.si.u75.fr:infra/ansible/roles/role-stash-file.git'
+  scm: git
